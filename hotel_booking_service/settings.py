@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "django_filters",
     "drf_spectacular",
     "users",
     "rooms",
@@ -53,8 +54,6 @@ INSTALLED_APPS = [
     "payments",
     "notifications",
     "rest_framework_simplejwt",
-    "rest_framework",
-    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
