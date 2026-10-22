@@ -1,11 +1,15 @@
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, viewsets, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from bookings.models import Booking
 from bookings.serializers import BookingListSerializer, BookingCreateSerializer
 from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
+
+from bookings.services import check_in, cancel_booking, check_out
 
 
 class BookingViewSet(
@@ -28,3 +32,36 @@ class BookingViewSet(
         if self.action == "create":
             return BookingCreateSerializer
         return BookingListSerializer
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="cancel",
+    )
+    def cancel(self, request, pk=None):
+        booking = self.get_object()
+        booking = cancel_booking(booking_id=booking.pk)
+        serializer = BookingListSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="check-in",
+    )
+    def check_in(self, request, pk=None):
+        booking = self.get_object()
+        booking = check_in(booking_id=booking.pk)
+        serializer = BookingListSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="check-out",
+    )
+    def check_out(self, request, pk=None):
+        booking = self.get_object()
+        booking = check_out(booking_id=booking.pk)
+        serializer = BookingListSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
