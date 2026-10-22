@@ -4,7 +4,7 @@ from rest_framework import routers
 from bookings.views import BookingViewSet
 
 router = routers.DefaultRouter()
-router.register("bookings", BookingViewSet, basename="booking")
+router.register("booking", BookingViewSet, basename="booking")
 
 urlpatterns = [path("", include(router.urls))]
 
