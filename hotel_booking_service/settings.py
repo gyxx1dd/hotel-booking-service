@@ -53,7 +53,6 @@ INSTALLED_APPS = [
     "payments",
     "notifications",
     "rest_framework_simplejwt",
-    "rest_framework",
     "drf_spectacular",
 ]
 
