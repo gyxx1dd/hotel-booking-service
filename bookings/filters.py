@@ -1,7 +1,6 @@
 from django_filters import rest_framework as filters
 from bookings.models import Booking
 
-
 class BookingFilter(filters.FilterSet):
     """
     Supported query params:
