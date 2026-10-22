@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "payments",
     "notifications",
     "rest_framework_simplejwt",
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
