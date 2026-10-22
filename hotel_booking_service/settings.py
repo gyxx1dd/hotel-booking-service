@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -54,7 +55,7 @@ INSTALLED_APPS = [
     "notifications",
     "rest_framework_simplejwt",
     "drf_spectacular",
-    'django_celery_beat',
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -158,10 +159,10 @@ SIMPLE_JWT = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Hotel Booking Service",
     "DESCRIPTION": "A local hotel manages room reservations manually via phone "
-                   "calls and paper logs. Guests cannot check room availability online, "
-                   "which leads to overbookings, missed check-ins, and payment confusion. "
-                   "Staff members also handle cancellations and payment tracking manually - increasing "
-                   "administrative workload and error rates.",
+    "calls and paper logs. Guests cannot check room availability online, "
+    "which leads to overbookings, missed check-ins, and payment confusion. "
+    "Staff members also handle cancellations and payment tracking manually - increasing "
+    "administrative workload and error rates.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
@@ -174,3 +175,10 @@ CELERY_RESULT_BACKEND = "redis://localhost:6379"
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+
+CELERY_BEAT_SCHEDULE = {
+    "mark-no-show-bookings-daily": {
+        "task": "bookings.tasks.mark_no_show_bookings",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}

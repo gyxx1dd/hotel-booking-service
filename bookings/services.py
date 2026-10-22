@@ -53,9 +53,10 @@ def check_out(booking_id):
 
 @transaction.atomic
 def no_show() -> None:
+    yesterday = timezone.localdate() - timedelta(days=1)
     bookings = Booking.objects.select_for_update().filter(
-        status=Booking.Status.BOOKED, check_in_date__date__lt=timezone.localdate()
+        status=Booking.Status.BOOKED, check_in_date__date__lte=yesterday
     )
     for booking in bookings:
         booking.status = Booking.Status.NO_SHOW
-        booking.save(update_fields=["status"])
+    Booking.objects.bulk_update(bookings, ["status"])
