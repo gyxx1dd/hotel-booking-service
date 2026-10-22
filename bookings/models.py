@@ -22,9 +22,9 @@ class Booking(models.Model):
         on_delete=models.CASCADE,
         related_name="bookings",
     )
-    check_in_date = models.DateField()
-    check_out_date = models.DateField()
-    actual_check_out_date = models.DateField(null=True, blank=True)
+    check_in_date = models.DateTimeField()
+    check_out_date = models.DateTimeField()
+    actual_check_out_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
