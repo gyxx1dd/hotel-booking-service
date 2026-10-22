@@ -78,3 +78,24 @@ class BookingTests(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(detail_url(foreign.id))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # --- filters ---
+    def test_filter_by_status(self):
+        self.make_booking(self.user)
+        self.make_booking(
+            self.user, start=10, end=12, booking_status=Booking.Status.CANCELLED
+        )
+        self.client.force_authenticate(self.user)
+        response = self.client.get(LIST_URL, {"status": "CANCELLED"})
+        self.assertEqual(len(results(response)), 1)
+
+    def test_filter_by_date_range_overlap(self):
+        self.make_booking(self.user, start=1, end=3)
+        self.make_booking(self.user, start=20, end=22)
+        self.client.force_authenticate(self.user)
+        params = {
+            "from": str(self.today),
+            "to": str(self.today + timedelta(days=5)),
+        }
+        response = self.client.get(LIST_URL, params)
+        self.assertEqual(len(results(response)), 1)
