@@ -47,13 +47,13 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
+    "drf_spectacular",
     "users",
     "rooms",
     "bookings",
     "payments",
     "notifications",
     "rest_framework_simplejwt",
-    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
