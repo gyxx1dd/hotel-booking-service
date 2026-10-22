@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
@@ -86,7 +88,7 @@ class BookingTests(APITestCase):
         response = self.client.get(detail_url(foreign.id))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    # filters
+    #   filters
     def test_filter_by_status(self):
         self.make_booking(self.user)
         self.make_booking(
@@ -121,11 +123,10 @@ class BookingTests(APITestCase):
                 "check_out_date": str(check_out),
             },
         )
-
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         booking = Booking.objects.get(id=response.data["id"])
         self.assertEqual(booking.user, self.user)
-        self.assertEqual(booking.price_per_night, self.room.price_per_night)
+        self.assertEqual(booking.price_per_night, Decimal("100.00"))
 
     def test_cannot_book_in_the_past(self):
         self.client.force_authenticate(self.user)
