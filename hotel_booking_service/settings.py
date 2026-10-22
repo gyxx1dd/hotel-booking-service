@@ -50,8 +50,9 @@ INSTALLED_APPS = [
     "bookings",
     "payments",
     "notifications",
-    'rest_framework_simplejwt',
+    "rest_framework_simplejwt",
     "rest_framework",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -140,8 +141,9 @@ AUTH_USER_MODEL = "users.User"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-       "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
@@ -149,4 +151,15 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZE",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Hotel Booking Service",
+    "DESCRIPTION": "A local hotel manages room reservations manually via phone "
+                   "calls and paper logs. Guests cannot check room availability online, "
+                   "which leads to overbookings, missed check-ins, and payment confusion. "
+                   "Staff members also handle cancellations and payment tracking manually - increasing "
+                   "administrative workload and error rates.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
