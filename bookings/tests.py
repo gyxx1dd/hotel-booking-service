@@ -41,14 +41,14 @@ class BookingTests(APITestCase):
             price_per_night="100.00",
             capacity=1,
         )
-        self.today = timezone.localdate()
+        self.now = timezone.now()
 
     def make_booking(self, user, start=1, end=3, booking_status=Booking.Status.BOOKED):
         return Booking.objects.create(
             room=self.room,
             user=user,
-            check_in_date=self.today + timedelta(days=start),
-            check_out_date=self.today + timedelta(days=end),
+            check_in_date=self.now + timedelta(days=start),
+            check_out_date=self.now + timedelta(days=end),
             price_per_night="100.00",
             status=booking_status,
         )
@@ -56,8 +56,8 @@ class BookingTests(APITestCase):
     def payload(self, start=1, end=3):
         return {
             "room": self.room.id,
-            "check_in_date": str(self.today + timedelta(days=start)),
-            "check_out_date": str(self.today + timedelta(days=end)),
+            "check_in_date": str(self.now + timedelta(days=start)),
+            "check_out_date": str(self.now + timedelta(days=end)),
         }
 
     # access
@@ -103,8 +103,8 @@ class BookingTests(APITestCase):
         self.make_booking(self.user, start=20, end=22)
         self.client.force_authenticate(self.user)
         params = {
-            "from": str(self.today),
-            "to": str(self.today + timedelta(days=5)),
+            "from": str(self.now),
+            "to": str(self.now + timedelta(days=5)),
         }
         response = self.client.get(LIST_URL, params)
         self.assertEqual(len(results(response)), 1)
@@ -112,8 +112,8 @@ class BookingTests(APITestCase):
     # create
     def test_create_booking_works(self):
         self.client.force_authenticate(self.user)
-        check_in = self.today + timedelta(days=1)
-        check_out = self.today + timedelta(days=3)
+        check_in = self.now + timedelta(days=1)
+        check_out = self.now + timedelta(days=3)
 
         response = self.client.post(
             LIST_URL,
@@ -130,8 +130,8 @@ class BookingTests(APITestCase):
 
     def test_cannot_book_in_the_past(self):
         self.client.force_authenticate(self.user)
-        check_in = self.today - timedelta(days=2)
-        check_out = self.today + timedelta(days=1)
+        check_in = self.now - timedelta(days=2)
+        check_out = self.now + timedelta(days=1)
 
         response = self.client.post(
             LIST_URL,
@@ -146,8 +146,8 @@ class BookingTests(APITestCase):
     def test_cannot_book_overlapping_dates(self):
         self.make_booking(self.other, start=1, end=5)
         self.client.force_authenticate(self.user)
-        check_in = self.today + timedelta(days=3)
-        check_out = self.today + timedelta(days=7)
+        check_in = self.now + timedelta(days=3)
+        check_out = self.now + timedelta(days=7)
 
         response = self.client.post(
             LIST_URL,
@@ -162,8 +162,8 @@ class BookingTests(APITestCase):
     def test_can_check_in_on_the_day_another_guest_checks_out(self):
         self.make_booking(self.other, start=1, end=3)
         self.client.force_authenticate(self.user)
-        check_in = self.today + timedelta(days=3)
-        check_out = self.today + timedelta(days=5)
+        check_in = self.now + timedelta(days=3)
+        check_out = self.now + timedelta(days=5)
 
         response = self.client.post(
             LIST_URL,

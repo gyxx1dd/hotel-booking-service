@@ -1,5 +1,4 @@
 from django_filters import rest_framework as filters
-
 from bookings.models import Booking
 
 
@@ -20,13 +19,16 @@ class BookingFilter(filters.FilterSet):
 
     class Meta:
         model = Booking
-        fields = ["user_id", "room_id", "room_type", "status", "from_date", "to_date"]
+        fields = ["user_id", "room_id", "room_type", "status"]
 
-    def __init__(self, data=None, *args, **kwargs):
-        if data is not None:
-            data = data.copy()
-            if "from" in data:
-                data["from_date"] = data["from"]
-            if "to" in data:
-                data["to_date"] = data["to"]
-        super().__init__(data, *args, **kwargs)
+    @property
+    def qs(self):
+        parent_qs = super().qs
+        from_param = self.data.get('from')
+        to_param = self.data.get('to')
+        if from_param:
+            parent_qs = parent_qs.filter(check_out_date__gt=from_param)
+        if to_param:
+            parent_qs = parent_qs.filter(check_in_date__lt=to_param)
+
+        return parent_qs

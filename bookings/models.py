@@ -53,7 +53,7 @@ class Booking(models.Model):
 
     @property
     def nights(self):
-        return (self.check_out_date - self.check_in_date).days
+        return (self.check_out_date.date() - self.check_in_date.date()).days
 
     @property
     def total_price(self):
