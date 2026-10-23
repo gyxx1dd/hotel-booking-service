@@ -164,3 +164,23 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+
+# Stripe (test mode only)
+# https://docs.stripe.com/keys
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+
+
+# Public site URL for building absolute links when there is no request
+# (e.g. Stripe redirect URLs created from Celery tasks)
+
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+
+
+# Trust the scheme set by a TLS-terminating proxy (e.g. ngrok), so
+# request.build_absolute_uri() returns https links and CSRF accepts the
+# https Origin. Without the header requests are treated as plain http.
+# https://docs.djangoproject.com/en/5.2/ref/settings/#secure-proxy-ssl-header
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
