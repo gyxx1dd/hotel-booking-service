@@ -53,3 +53,21 @@ class BookingViewSet(
         transaction.on_commit(
             lambda: send_notification_task.delay(message)
         )
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        old_status = serializer.instance.status
+        booking = serializer.save()
+        message = (
+            f"Cancel booking:\n"
+            f"<b>ID:</b> {booking.id}\n"
+            f"<b>Customer:</b> {escape(booking.user.email)} {escape(booking.user.first_name)} {escape(booking.user.last_name)}\n"
+            f"<b>Room:</b> {booking.room.number}, {escape(str(booking.room.type))}\n"
+            f"<b>Status:</b> {booking.status}\n"
+            f"<b>Who cancel:</b> {escape(self.request.user.email)}\n"
+            f"<b>Price per night:</b> {booking.price_per_night}\n"
+            f"<b>Check-in date:</b> {booking.check_in_date}\n"
+            f"<b>Check-out date:</b> {booking.check_out_date}\n"
+        )
+        if old_status != "CANCELLED" and booking.status == "CANCELLED":
+            send_notification_task(message)
