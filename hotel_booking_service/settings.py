@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "payments",
     "notifications",
     "rest_framework_simplejwt",
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -169,6 +170,13 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+
+CELERY_BROKER_URL = "redis://localhost:6379"
+CELERY_TIMEZONE = "Europe/Kyiv"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
 
 # Stripe (test mode only)
 # https://docs.stripe.com/keys
