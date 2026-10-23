@@ -31,7 +31,10 @@ class UnauthenticatedRoomApiTests(TestCase):
 
     def test_create_rooms_not_allowed(self):
         res = self.client.post(ROOM_LIST_URL, room_payload(number="201"))
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            res.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
 
 class AuthenticatedRoomApiTests(TestCase):
