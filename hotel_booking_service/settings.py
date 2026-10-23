@@ -92,8 +92,12 @@ WSGI_APPLICATION = "hotel_booking_service.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": os.environ["POSTGRES_PORT"],
     }
 }
 
@@ -173,3 +177,22 @@ CELERY_BROKER_URL = os.environ["BROKER_URL"]
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+
+# Stripe (test mode only)
+# https://docs.stripe.com/keys
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+
+
+# Public site URL for building absolute links when there is no request
+# (e.g. Stripe redirect URLs created from Celery tasks)
+
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+
+
+# Trust the scheme set by a TLS-terminating proxy (e.g. ngrok), so
+# request.build_absolute_uri() returns https links and CSRF accepts the
+# https Origin. Without the header requests are treated as plain http.
+# https://docs.djangoproject.com/en/5.2/ref/settings/#secure-proxy-ssl-header
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

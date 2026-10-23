@@ -42,7 +42,7 @@ class RoomViewSet(viewsets.ModelViewSet):
             except ValueError:
                 raise ValidationError({"capacity": "Must be an integer."})
 
-            queryset = queryset.filter(capacity__gte=capacity)
+            queryset = queryset.filter(capacity=capacity)
 
         return queryset
 
@@ -61,8 +61,7 @@ class RoomViewSet(viewsets.ModelViewSet):
                 "capacity",
                 type=OpenApiTypes.INT,
                 description=(
-                    "Return rooms with capacity greater than "
-                    "or equal to this value"
+                    "Filter by exact room capacity"
                 ),
             ),
         ]
