@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -47,14 +48,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
-    "drf_spectacular",
     "users",
     "rooms",
     "bookings",
     "payments",
     "notifications",
     "rest_framework_simplejwt",
-    'django_celery_beat',
+    "drf_spectacular",
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -92,8 +93,12 @@ WSGI_APPLICATION = "hotel_booking_service.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "mydatabase",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST"),
+        "PORT": os.getenv("POSTGRES_PORT"),
     }
 }
 
@@ -122,7 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Kyiv"
 
 USE_I18N = True
 
@@ -158,10 +163,10 @@ SIMPLE_JWT = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Hotel Booking Service",
     "DESCRIPTION": "A local hotel manages room reservations manually via phone "
-                   "calls and paper logs. Guests cannot check room availability online, "
-                   "which leads to overbookings, missed check-ins, and payment confusion. "
-                   "Staff members also handle cancellations and payment tracking manually - increasing "
-                   "administrative workload and error rates.",
+    "calls and paper logs. Guests cannot check room availability online, "
+    "which leads to overbookings, missed check-ins, and payment confusion. "
+    "Staff members also handle cancellations and payment tracking manually - increasing "
+    "administrative workload and error rates.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
@@ -169,6 +174,19 @@ SPECTACULAR_SETTINGS = {
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
+
+CELERY_BEAT_SCHEDULE = {
+    "mark-no-show-bookings-daily": {
+        "task": "bookings.tasks.mark_no_show_bookings",
+        "schedule": crontab(hour=0, minute=0),
+    },
+    "create-payments-for-no-show-bookings": {
+        "task": "bookings.tasks.create_payments_for_no_show_bookings",
+        "schedule": crontab(hour=0, minute=15),
+    },
+}
+
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 CELERY_BROKER_URL = os.environ["BROKER_URL"]
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_TASK_TRACK_STARTED = True

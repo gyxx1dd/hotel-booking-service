@@ -1,5 +1,4 @@
 from celery import shared_task
-
 from notifications.services import send_telegram_notification
 
 
