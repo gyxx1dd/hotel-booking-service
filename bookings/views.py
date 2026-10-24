@@ -1,5 +1,6 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -40,7 +41,10 @@ class BookingViewSet(
     )
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        booking = cancel_booking(booking_id=booking.pk)
+        try:
+            booking = cancel_booking(booking_id=booking.pk)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = BookingListSerializer(booking)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -51,7 +55,10 @@ class BookingViewSet(
     )
     def check_in(self, request, pk=None):
         booking = self.get_object()
-        booking = check_in(booking_id=booking.pk)
+        try:
+            booking = check_in(booking_id=booking.pk)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = BookingListSerializer(booking)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -62,6 +69,9 @@ class BookingViewSet(
     )
     def check_out(self, request, pk=None):
         booking = self.get_object()
-        booking = check_out(booking_id=booking.pk)
+        try:
+            booking = check_out(booking_id=booking.pk)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = BookingListSerializer(booking)
         return Response(serializer.data, status=status.HTTP_200_OK)
