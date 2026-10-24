@@ -42,7 +42,7 @@ class PaymentWebHookView(APIView):
                 f"<b>Status:</b> {payment.status}"
                 f"<b>Price:</b> {payment.money_to_pay}"
             )
-            send_notification_task(message)
+            send_notification_task.delay(message)
         elif event.type == "checkout.session.expired":
             new_status = Payment.Status.EXPIRED
         else:
