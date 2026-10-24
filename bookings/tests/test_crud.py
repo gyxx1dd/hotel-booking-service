@@ -1,5 +1,4 @@
 from datetime import timedelta
-
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -41,6 +40,7 @@ class BookingTests(APITestCase):
             price_per_night="100.00",
             capacity=1,
         )
+        # Сохраняем DateTimeField стандарт
         self.now = timezone.now()
 
     def make_booking(self, user, start=1, end=3, booking_status=Booking.Status.BOOKED):
