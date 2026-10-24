@@ -1,16 +1,12 @@
-import math
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 import stripe
 from django.conf import settings
-from django.urls import reverse
+from rest_framework.exceptions import APIException
 
 from bookings.models import Booking
 from payments.models import Payment
-
-SUCCESS_URL_NAME = "payments:success"
-CANCEL_URL_NAME = "payments:cancel"
 
 FEE_MULTIPLIERS = {
     Payment.Type.BOOKING: Decimal("1"),
@@ -26,7 +22,7 @@ def get_overstay_days(booking: Booking) -> int:
     late_by = booking.actual_check_out_date - booking.check_out_date
     if late_by <= timedelta(0):
         return 0
-    return math.ceil(late_by / timedelta(days=1))
+    return late_by // timedelta(days=1)
 
 
 def calculate_payment_amount(booking: Booking, payment_type: str) -> Decimal:
@@ -43,47 +39,33 @@ def calculate_payment_amount(booking: Booking, payment_type: str) -> Decimal:
     return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def _build_absolute_url(url_name: str, request=None) -> str:
-    path = reverse(url_name)
-    if request is not None:
-        return request.build_absolute_uri(path)
-    return settings.BASE_URL.rstrip("/") + path
-
-
 def create_payment_session(
-    booking: Booking, payment_type: str, request=None
-) -> Payment:
+    booking: Booking, payment_type: str
+) -> stripe.checkout.Session:
     payment_type = Payment.Type(payment_type)
     amount = calculate_payment_amount(booking, payment_type)
 
-    session = stripe.checkout.Session.create(
-        api_key=settings.STRIPE_SECRET_KEY,
-        mode="payment",
-        line_items=[
-            {
-                "price_data": {
-                    "currency": "usd",
-                    "unit_amount": int(amount * 100),
-                    "product_data": {
-                        "name": f"Booking #{booking.pk}: {payment_type.label}",
+    try:
+        return stripe.checkout.Session.create(
+            api_key=settings.STRIPE_SECRET_KEY,
+            mode="payment",
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(amount * 100),
+                        "product_data": {
+                            "name": f"Booking #{booking.pk}: {payment_type.label}",
+                        },
                     },
-                },
-                "quantity": 1,
-            }
-        ],
-        success_url=_build_absolute_url(SUCCESS_URL_NAME, request)
-        + "?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url=_build_absolute_url(CANCEL_URL_NAME, request),
-        metadata={
-            "booking_id": str(booking.pk),
-            "payment_type": payment_type.value,
-        },
-    )
-
-    return Payment.objects.create(
-        booking=booking,
-        type=payment_type,
-        money_to_pay=amount,
-        session_id=session.id,
-        session_url=session.url,
-    )
+                    "quantity": 1,
+                }
+            ],
+            success_url=settings.BASE_URL,
+            metadata={
+                "booking_id": str(booking.pk),
+                "payment_type": payment_type.value,
+            },
+        )
+    except stripe.StripeError:
+        raise APIException
