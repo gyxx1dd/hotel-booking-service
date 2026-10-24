@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from bookings.models import Booking
+from payments.serializers import PaymentSerializer
 from rooms.models import Room
 
 OCCUPYING_STATUSES = [Booking.Status.BOOKED, Booking.Status.ACTIVE]
@@ -11,6 +12,7 @@ OCCUPYING_STATUSES = [Booking.Status.BOOKED, Booking.Status.ACTIVE]
 class BookingListSerializer(serializers.ModelSerializer):
     room_number = serializers.CharField(source="room.number", read_only=True)
     room_type = serializers.CharField(source="room.type", read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Booking
@@ -25,6 +27,7 @@ class BookingListSerializer(serializers.ModelSerializer):
             "actual_check_out_date",
             "status",
             "price_per_night",
+            "payments",
         )
         read_only_fields = fields
 
