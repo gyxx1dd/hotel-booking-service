@@ -24,7 +24,7 @@ class BookingViewSet(
     filterset_class = BookingFilter
 
     def get_queryset(self):
-        queryset = Booking.objects.select_related("room")
+        queryset = Booking.objects.select_related("room").prefetch_related("payments")
         if not self.request.user.is_staff:
             queryset = queryset.filter(user=self.request.user)
         return queryset
@@ -34,44 +34,26 @@ class BookingViewSet(
             return BookingCreateSerializer
         return BookingListSerializer
 
-    @action(
-        methods=["POST"],
-        detail=True,
-        url_path="cancel",
-    )
+    @staticmethod
+    def _run_booking_action(service, booking):
+        try:
+            booking = service(booking_id=booking.pk)
+        except ValidationError as e:
+            return Response(
+                {"detail": str(e.detail)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = BookingListSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=["POST"], detail=True, url_path="cancel")
     def cancel(self, request, pk=None):
-        booking = self.get_object()
-        try:
-            booking = cancel_booking(booking_id=booking.pk)
-        except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = BookingListSerializer(booking)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return self._run_booking_action(cancel_booking, self.get_object())
 
-    @action(
-        methods=["POST"],
-        detail=True,
-        url_path="check-in",
-    )
+    @action(methods=["POST"], detail=True, url_path="check-in")
     def check_in(self, request, pk=None):
-        booking = self.get_object()
-        try:
-            booking = check_in(booking_id=booking.pk)
-        except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = BookingListSerializer(booking)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return self._run_booking_action(check_in, self.get_object())
 
-    @action(
-        methods=["POST"],
-        detail=True,
-        url_path="check-out",
-    )
+    @action(methods=["POST"], detail=True, url_path="check-out")
     def check_out(self, request, pk=None):
-        booking = self.get_object()
-        try:
-            booking = check_out(booking_id=booking.pk)
-        except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = BookingListSerializer(booking)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return self._run_booking_action(check_out, self.get_object())
