@@ -38,5 +38,6 @@ urlpatterns = [
     path("api/v1/bookings/", include("bookings.urls")),
     path("api/v1/users/", include("users.urls", namespace="users")),
     path("api/v1/rooms/", include("rooms.urls")),
+    path("api/v1/payments/", include("payments.urls")),
  ]
 

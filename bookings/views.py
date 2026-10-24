@@ -1,22 +1,27 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from html import escape
+
+from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from bookings.models import Booking
-from bookings.serializers import BookingListSerializer, BookingCreateSerializer
+from bookings.serializers import BookingListSerializer, BookingCreateSerializer, BookingUpdateSerializer
 from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
 
 from bookings.services import check_in, cancel_booking, check_out
+from notifications.tasks import send_notification_task
 
 
 class BookingViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     permission_classes = [IsAuthenticated]
@@ -32,6 +37,8 @@ class BookingViewSet(
     def get_serializer_class(self):
         if self.action == "create":
             return BookingCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return BookingUpdateSerializer
         return BookingListSerializer
 
     @staticmethod
@@ -57,3 +64,40 @@ class BookingViewSet(
     @action(methods=["POST"], detail=True, url_path="check-out")
     def check_out(self, request, pk=None):
         return self._run_booking_action(check_out, self.get_object())
+    
+    @transaction.atomic
+    def perform_create(self, serializer):
+        booking = serializer.save()
+        message = (
+            f"New booking:\n"
+            f"<b>ID:</b> {booking.id}\n"
+            f"<b>Customer:</b> {escape(booking.user.email)} {escape(booking.user.first_name)} {escape(booking.user.last_name)}\n"
+            f"<b>Room:</b> {booking.room.number}, {escape(str(booking.room.type))}\n"
+            f"<b>Status:</b> {booking.status}\n"
+            f"<b>Price per night:</b> {booking.price_per_night}\n"
+            f"<b>Check-in date:</b> {booking.check_in_date}\n"
+            f"<b>Check-out date:</b> {booking.check_out_date}\n"
+        )
+        transaction.on_commit(
+            lambda: send_notification_task.delay(message)
+        )
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        old_status = serializer.instance.status
+        booking = serializer.save()
+        message = (
+            f"Cancel booking:\n"
+            f"<b>ID:</b> {booking.id}\n"
+            f"<b>Customer:</b> {escape(booking.user.email)} {escape(booking.user.first_name)} {escape(booking.user.last_name)}\n"
+            f"<b>Room:</b> {booking.room.number}, {escape(str(booking.room.type))}\n"
+            f"<b>Status:</b> {booking.status}\n"
+            f"<b>Who cancel:</b> {escape(self.request.user.email)}\n"
+            f"<b>Price per night:</b> {booking.price_per_night}\n"
+            f"<b>Check-in date:</b> {booking.check_in_date}\n"
+            f"<b>Check-out date:</b> {booking.check_out_date}\n"
+        )
+        if old_status != Booking.Status.CANCELLED and booking.status == Booking.Status.CANCELLED:
+            transaction.on_commit(
+                lambda: send_notification_task.delay(message)
+            )
