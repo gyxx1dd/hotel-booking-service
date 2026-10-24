@@ -1,4 +1,3 @@
-import math
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -26,7 +25,7 @@ def get_overstay_days(booking: Booking) -> int:
     late_by = booking.actual_check_out_date - booking.check_out_date
     if late_by <= timedelta(0):
         return 0
-    return math.ceil(late_by / timedelta(days=1))
+    return late_by // timedelta(days=1)
 
 
 def calculate_payment_amount(booking: Booking, payment_type: str) -> Decimal:

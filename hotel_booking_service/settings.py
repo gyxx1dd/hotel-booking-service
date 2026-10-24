@@ -163,10 +163,10 @@ SIMPLE_JWT = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Hotel Booking Service",
     "DESCRIPTION": "A local hotel manages room reservations manually via phone "
-                   "calls and paper logs. Guests cannot check room availability online, "
-                   "which leads to overbookings, missed check-ins, and payment confusion. "
-                   "Staff members also handle cancellations and payment tracking manually - increasing "
-                   "administrative workload and error rates.",
+    "calls and paper logs. Guests cannot check room availability online, "
+    "which leads to overbookings, missed check-ins, and payment confusion. "
+    "Staff members also handle cancellations and payment tracking manually - increasing "
+    "administrative workload and error rates.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
@@ -184,6 +184,10 @@ CELERY_BEAT_SCHEDULE = {
     "mark-no-show-bookings-daily": {
         "task": "bookings.tasks.mark_no_show_bookings",
         "schedule": crontab(hour=0, minute=0),
+    },
+    "create-payments-for-no-show-bookings": {
+        "task": "bookings.tasks.create_payments_for_no_show_bookings",
+        "schedule": crontab(hour=0, minute=15),
     },
 }
 
