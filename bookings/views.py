@@ -69,5 +69,7 @@ class BookingViewSet(
             f"<b>Check-in date:</b> {booking.check_in_date}\n"
             f"<b>Check-out date:</b> {booking.check_out_date}\n"
         )
-        if old_status != "CANCELLED" and booking.status == "CANCELLED":
-            send_notification_task(message)
+        if old_status != Booking.Status.CANCELLED and booking.status == Booking.Status.CANCELLED:
+            transaction.on_commit(
+                lambda: send_notification_task.delay(message)
+            )
