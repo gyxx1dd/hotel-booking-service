@@ -13,6 +13,7 @@ from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
 
+from notifications.services import booking_details
 from bookings.services import check_in, cancel_booking, check_out
 from notifications.tasks import send_notification_task
 
@@ -68,16 +69,7 @@ class BookingViewSet(
     @transaction.atomic
     def perform_create(self, serializer):
         booking = serializer.save()
-        message = (
-            f"New booking:\n"
-            f"<b>ID:</b> {booking.id}\n"
-            f"<b>Customer:</b> {escape(booking.user.email)} {escape(booking.user.first_name)} {escape(booking.user.last_name)}\n"
-            f"<b>Room:</b> {booking.room.number}, {escape(str(booking.room.type))}\n"
-            f"<b>Status:</b> {booking.status}\n"
-            f"<b>Price per night:</b> {booking.price_per_night}\n"
-            f"<b>Check-in date:</b> {booking.check_in_date}\n"
-            f"<b>Check-out date:</b> {booking.check_out_date}\n"
-        )
+        message = "<b>New booking:</b>\n" + booking_details(booking)
         transaction.on_commit(
             lambda: send_notification_task.delay(message)
         )
@@ -88,14 +80,8 @@ class BookingViewSet(
         booking = serializer.save()
         message = (
             f"Cancel booking:\n"
-            f"<b>ID:</b> {booking.id}\n"
-            f"<b>Customer:</b> {escape(booking.user.email)} {escape(booking.user.first_name)} {escape(booking.user.last_name)}\n"
-            f"<b>Room:</b> {booking.room.number}, {escape(str(booking.room.type))}\n"
-            f"<b>Status:</b> {booking.status}\n"
-            f"<b>Who cancel:</b> {escape(self.request.user.email)}\n"
-            f"<b>Price per night:</b> {booking.price_per_night}\n"
-            f"<b>Check-in date:</b> {booking.check_in_date}\n"
-            f"<b>Check-out date:</b> {booking.check_out_date}\n"
+            + booking_details(booking)
+            + f"<b>Who cancel:</b> {escape(self.request.user.email)}\n"
         )
         if old_status != Booking.Status.CANCELLED and booking.status == Booking.Status.CANCELLED:
             transaction.on_commit(
