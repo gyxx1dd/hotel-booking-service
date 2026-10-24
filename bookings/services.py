@@ -1,10 +1,12 @@
 from datetime import timedelta
+from html import escape
 
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, APIException
 
 from bookings.models import Booking
+from notifications.tasks import send_notification_task
 from payments.models import Payment
 from payments.services import (
     create_payment_session,
@@ -142,7 +144,7 @@ def process_expired_no_show_bookings() -> None:
         except APIException:
             continue
 
-        Payment.objects.create(
+        payment = Payment.objects.create(
             booking=booking,
             type=Payment.Type.NO_SHOW_FEE,
             money_to_pay=calculate_payment_amount(
@@ -152,3 +154,12 @@ def process_expired_no_show_bookings() -> None:
             session_id=session.id,
             session_url=session.url,
         )
+
+        message = (
+            f"No-show payments:\n"
+            f"<b>ID Booking:</b> {payment.booking.id}\n"
+            f"<b>Type:</b> {payment.type}\n"
+            f"<b>Pay:</b> {payment.money_to_pay}\n"
+            f"<b>Url:</b> {escape(payment.session_url)}\n"
+        )
+        send_notification_task.delay(message)
