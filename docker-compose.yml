@@ -1,6 +1,27 @@
 services:
+  hotel-booking:
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+            python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine3.23
     restart: always
     env_file:
       - .env
@@ -8,6 +29,53 @@ services:
       - "5433:5432"
     volumes:
       - my_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
+  redis:
+    image: redis:alpine3.23
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: "celery -A hotel_booking_service worker -l info"
+    depends_on:
+      hotel-booking:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    env_file:
+      - .env
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: "celery -A hotel_booking_service beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    depends_on:
+      hotel-booking:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    env_file:
+      - .env
 
 volumes:
   my_db:
