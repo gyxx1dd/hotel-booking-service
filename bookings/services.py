@@ -3,7 +3,6 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Model
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, APIException
 
@@ -14,7 +13,6 @@ from payments.services import (
     get_overstay_days,
     calculate_payment_amount,
 )
-from users.models import User
 
 
 def cancel_booking(booking_id):
