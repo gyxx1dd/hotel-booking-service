@@ -1,4 +1,5 @@
 from datetime import timedelta
+from html import escape
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -7,6 +8,8 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError, APIException
 
 from bookings.models import Booking
+from notifications.services import booking_details
+from notifications.tasks import send_notification_task
 from payments.models import Payment
 from payments.services import (
     create_payment_session,
@@ -33,7 +36,7 @@ def cancel_booking(booking_id):
             raise ValidationError("Only booked reservations can be cancelled.")
         booking.status = Booking.Status.CANCELLED
         booking.save(update_fields=["status"])
-        Payment.objects.create(
+        payment = Payment.objects.create(
             booking=booking,
             type=Payment.Type.CANCELLATION_FEE,
             money_to_pay=calculate_payment_amount(
@@ -41,6 +44,17 @@ def cancel_booking(booking_id):
             ),
             session_id=session.id,
             session_url=session.url,
+        )
+        message = (
+            f"Cancel booking:" + booking_details(booking) +
+            f"<b>ID Booking:</b> {payment.booking.id}\n"
+            f"<b>Type:</b> {payment.type}\n"
+            f"<b>Pay:</b> {payment.money_to_pay}\n"
+            f"<b>Url to pay:</b> {escape(payment.session_url)}\n"
+        )
+        transaction.on_commit(
+            lambda: send_notification_task.delay(message),
+            robust=True,
         )
     return booking
 
@@ -124,6 +138,18 @@ def no_show() -> None:
         booking.status = Booking.Status.NO_SHOW
     Booking.objects.bulk_update(bookings, ["status"])
 
+    messages = [
+        "No-show:\n"
+        + booking_details(booking)
+        + f"<b>ID Booking:</b> {booking.id}\n"
+        for booking in bookings
+    ]
+
+    def notify():
+        for message in messages:
+            send_notification_task.delay(message)
+
+    transaction.on_commit(notify, robust=True)
 
 def process_expired_no_show_bookings() -> None:
     bookings = Booking.objects.filter(
@@ -139,7 +165,7 @@ def process_expired_no_show_bookings() -> None:
         except APIException:
             continue
 
-        Payment.objects.create(
+        payment = Payment.objects.create(
             booking=booking,
             type=Payment.Type.NO_SHOW_FEE,
             money_to_pay=calculate_payment_amount(
@@ -149,7 +175,16 @@ def process_expired_no_show_bookings() -> None:
             session_id=session.id,
             session_url=session.url,
         )
+        message = (
+            f"No-show payments:\n"
+            f"<b>ID Booking:</b> {payment.booking.id}\n"
+            f"<b>Type:</b> {payment.type}\n"
+            f"<b>Pay:</b> {payment.money_to_pay}\n"
+            f"<b>Url:</b> {escape(payment.session_url)}\n"
+        )
+        send_notification_task.delay(message)
         send_no_show_payment_email(booking=booking, session_url=session.url)
+        
         bookings_to_delete.append(booking.pk)
     Booking.objects.filter(pk__in=bookings_to_delete).delete()
 
@@ -166,3 +201,5 @@ def send_no_show_payment_email(booking, session_url):
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[booking.user.email],
     )
+
+        
