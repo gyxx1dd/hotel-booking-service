@@ -134,6 +134,18 @@ def no_show() -> None:
         booking.status = Booking.Status.NO_SHOW
     Booking.objects.bulk_update(bookings, ["status"])
 
+    messages = [
+        "No-show:\n"
+        + booking_details(booking)
+        + f"<b>ID Booking:</b> {booking.id}\n"
+        for booking in bookings
+    ]
+
+    def notify():
+        for message in messages:
+            send_notification_task.delay(message)
+
+    transaction.on_commit(notify, robust=True)
 
 def process_expired_no_show_bookings() -> None:
     bookings = Booking.objects.filter(
