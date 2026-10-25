@@ -48,7 +48,10 @@ def cancel_booking(booking_id):
             f"<b>Pay:</b> {payment.money_to_pay}\n"
             f"<b>Url to pay:</b> {escape(payment.session_url)}\n"
         )
-        send_notification_task.delay(message)
+        transaction.on_commit(
+            lambda: send_notification_task.delay(message),
+            robust=True,
+        )
     return booking
 
 
