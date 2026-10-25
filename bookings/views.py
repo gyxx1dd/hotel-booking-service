@@ -8,7 +8,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from bookings.models import Booking
-from bookings.serializers import BookingListSerializer, BookingCreateSerializer, BookingUpdateSerializer
+from bookings.serializers import (
+    BookingListSerializer,
+    BookingCreateSerializer,
+    BookingUpdateSerializer,
+)
 from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -47,7 +51,7 @@ class BookingViewSet(
             booking = service(booking_id=booking.pk)
         except ValidationError as e:
             return Response(
-                {"detail": str(e.detail)},
+                {"detail": e.detail},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = BookingListSerializer(booking)
@@ -64,7 +68,7 @@ class BookingViewSet(
     @action(methods=["POST"], detail=True, url_path="check-out")
     def check_out(self, request, pk=None):
         return self._run_booking_action(check_out, self.get_object())
-    
+
     @transaction.atomic
     def perform_create(self, serializer):
         booking = serializer.save()
@@ -78,9 +82,7 @@ class BookingViewSet(
             f"<b>Check-in date:</b> {booking.check_in_date}\n"
             f"<b>Check-out date:</b> {booking.check_out_date}\n"
         )
-        transaction.on_commit(
-            lambda: send_notification_task.delay(message)
-        )
+        transaction.on_commit(lambda: send_notification_task.delay(message))
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -97,7 +99,8 @@ class BookingViewSet(
             f"<b>Check-in date:</b> {booking.check_in_date}\n"
             f"<b>Check-out date:</b> {booking.check_out_date}\n"
         )
-        if old_status != Booking.Status.CANCELLED and booking.status == Booking.Status.CANCELLED:
-            transaction.on_commit(
-                lambda: send_notification_task.delay(message)
-            )
+        if (
+            old_status != Booking.Status.CANCELLED
+            and booking.status == Booking.Status.CANCELLED
+        ):
+            transaction.on_commit(lambda: send_notification_task.delay(message))
