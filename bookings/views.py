@@ -9,9 +9,10 @@ from rest_framework.response import Response
 
 from bookings.models import Booking
 from bookings.serializers import BookingListSerializer, BookingCreateSerializer
-from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
+
+from .filters import BookingFilter
 
 from notifications.services import booking_details
 from bookings.services import check_in, cancel_booking, check_out
@@ -29,6 +30,8 @@ class BookingViewSet(
     filterset_class = BookingFilter
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Booking.objects.none()
         queryset = Booking.objects.select_related("room").prefetch_related("payments")
         if not self.request.user.is_staff:
             queryset = queryset.filter(user=self.request.user)
@@ -62,11 +65,9 @@ class BookingViewSet(
     @action(methods=["POST"], detail=True, url_path="check-out")
     def check_out(self, request, pk=None):
         return self._run_booking_action(check_out, self.get_object())
-    
+
     @transaction.atomic
     def perform_create(self, serializer):
         booking = serializer.save()
         message = "<b>New booking:</b>\n" + booking_details(booking)
-        transaction.on_commit(
-            lambda: send_notification_task.delay(message)
-        )
+        transaction.on_commit(lambda: send_notification_task.delay(message))
