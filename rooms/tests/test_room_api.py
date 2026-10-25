@@ -170,9 +170,10 @@ class RoomFilterApiTests(TestCase):
         single_room = RoomSerializer(self.single_room).data
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn(suite_room, res.data)
-        self.assertNotIn(double_room, res.data)
-        self.assertNotIn(single_room, res.data)
+        results = res.data["results"]
+        self.assertIn(suite_room, results)
+        self.assertNotIn(double_room, results)
+        self.assertNotIn(single_room, results)
 
     def test_filter_rooms_by_type_lowercase(self):
         res = self.client.get(ROOM_LIST_URL, {"type": "suite"})
@@ -181,9 +182,10 @@ class RoomFilterApiTests(TestCase):
         single_room = RoomSerializer(self.single_room).data
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn(suite_room, res.data)
-        self.assertNotIn(double_room, res.data)
-        self.assertNotIn(single_room, res.data)
+        results = res.data["results"]
+        self.assertIn(suite_room, results)
+        self.assertNotIn(double_room, results)
+        self.assertNotIn(single_room, results)
 
     def test_filter_rooms_by_capacity(self):
         res = self.client.get(ROOM_LIST_URL, {"capacity": 2})
@@ -192,9 +194,10 @@ class RoomFilterApiTests(TestCase):
         single_room = RoomSerializer(self.single_room).data
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn(double_room, res.data)
-        self.assertNotIn(suite_room, res.data)
-        self.assertNotIn(single_room, res.data)
+        results = res.data["results"]
+        self.assertIn(double_room, results)
+        self.assertNotIn(suite_room, results)
+        self.assertNotIn(single_room, results)
 
     def test_filter_rooms_by_wrong_type(self):
         res = self.client.get(ROOM_LIST_URL, {"type": "abc"})

@@ -1,18 +1,19 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from html import escape
 
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from bookings.models import Booking
-from bookings.serializers import BookingListSerializer, BookingCreateSerializer
+from bookings.serializers import (
+    BookingListSerializer,
+    BookingCreateSerializer,
+)
+from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
-
-from .filters import BookingFilter
 
 from notifications.services import booking_details
 from bookings.services import check_in, cancel_booking, check_out
@@ -48,7 +49,7 @@ class BookingViewSet(
             booking = service(booking_id=booking.pk)
         except ValidationError as e:
             return Response(
-                {"detail": str(e.detail)},
+                {"detail": e.detail},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = BookingListSerializer(booking)
