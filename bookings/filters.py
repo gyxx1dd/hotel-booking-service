@@ -1,6 +1,7 @@
 from django_filters import rest_framework as filters
 from bookings.models import Booking
 
+
 class BookingFilter(filters.FilterSet):
     """
     Supported query params:
@@ -19,15 +20,3 @@ class BookingFilter(filters.FilterSet):
     class Meta:
         model = Booking
         fields = ["user_id", "room_id", "room_type", "status"]
-
-    @property
-    def qs(self):
-        parent_qs = super().qs
-        from_param = self.data.get('from')
-        to_param = self.data.get('to')
-        if from_param:
-            parent_qs = parent_qs.filter(check_out_date__gt=from_param)
-        if to_param:
-            parent_qs = parent_qs.filter(check_in_date__lt=to_param)
-
-        return parent_qs
