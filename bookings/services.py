@@ -125,15 +125,8 @@ def process_expired_no_show_bookings() -> None:
     bookings = Booking.objects.filter(
         check_out_date__lt=timezone.now(), status=Booking.Status.NO_SHOW
     )
+    bookings_to_delete = []
     for booking in bookings:
-        existing_payment = Payment.objects.filter(
-            booking=booking,
-            type=Payment.Type.NO_SHOW_FEE,
-        ).exists()
-
-        if existing_payment:
-            continue
-
         try:
             session = create_payment_session(
                 booking=booking,
@@ -152,3 +145,5 @@ def process_expired_no_show_bookings() -> None:
             session_id=session.id,
             session_url=session.url,
         )
+        bookings_to_delete.append(booking.pk)
+    Booking.objects.filter(pk__in=bookings_to_delete).delete()
