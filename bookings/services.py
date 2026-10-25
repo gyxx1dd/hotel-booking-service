@@ -22,36 +22,50 @@ def cancel_booking(booking_id):
     booking = Booking.objects.get(pk=booking_id)
     if booking.status != Booking.Status.BOOKED:
         raise ValidationError("Only booked reservations can be cancelled.")
-    if booking.check_in_date <= timezone.now():
+
+    now = timezone.now()
+
+    if booking.check_in_date <= now:
         raise ValidationError("Booking can only be cancelled before check-in.")
-    try:
-        session = create_payment_session(
-            booking=booking, payment_type=Payment.Type.CANCELLATION_FEE
-        )
-    except APIException:
-        raise APIException("Could not create checkout payment session.")
+
+    needs_fee = booking.check_in_date < now + timedelta(days=1)
+    session = None
+
+    if needs_fee:
+        try:
+            session = create_payment_session(
+                booking=booking, payment_type=Payment.Type.CANCELLATION_FEE
+            )
+        except APIException:
+            raise APIException("Could not create checkout payment session.")
+
     with transaction.atomic():
         booking = Booking.objects.select_for_update().get(pk=booking_id)
+
         if booking.status != Booking.Status.BOOKED:
             raise ValidationError("Only booked reservations can be cancelled.")
+
         booking.status = Booking.Status.CANCELLED
         booking.save(update_fields=["status"])
-        payment = Payment.objects.create(
-            booking=booking,
-            type=Payment.Type.CANCELLATION_FEE,
-            money_to_pay=calculate_payment_amount(
-                booking, Payment.Type.CANCELLATION_FEE
-            ),
-            session_id=session.id,
-            session_url=session.url,
-        )
-        message = (
-            f"Cancel booking:" + booking_details(booking) +
-            f"<b>ID Booking:</b> {payment.booking.id}\n"
-            f"<b>Type:</b> {payment.type}\n"
-            f"<b>Pay:</b> {payment.money_to_pay}\n"
-            f"<b>Url to pay:</b> {escape(payment.session_url)}\n"
-        )
+
+        message = f"Cancel booking:" + booking_details(booking)
+
+        if needs_fee:
+            payment = Payment.objects.create(
+                booking=booking,
+                type=Payment.Type.CANCELLATION_FEE,
+                money_to_pay=calculate_payment_amount(
+                    booking, Payment.Type.CANCELLATION_FEE
+                ),
+                session_id=session.id,
+                session_url=session.url,
+            )
+            message += (
+                f"<b>ID Booking:</b> {payment.booking.id}\n"
+                f"<b>Type:</b> {payment.type}\n"
+                f"<b>Pay:</b> {payment.money_to_pay}\n"
+                f"<b>Url to pay:</b> {escape(payment.session_url)}\n"
+            )
         transaction.on_commit(
             lambda: send_notification_task.delay(message),
             robust=True,
@@ -139,9 +153,7 @@ def no_show() -> None:
     Booking.objects.bulk_update(bookings, ["status"])
 
     messages = [
-        "No-show:\n"
-        + booking_details(booking)
-        + f"<b>ID Booking:</b> {booking.id}\n"
+        "No-show:\n" + booking_details(booking) + f"<b>ID Booking:</b> {booking.id}\n"
         for booking in bookings
     ]
 
@@ -150,6 +162,7 @@ def no_show() -> None:
             send_notification_task.delay(message)
 
     transaction.on_commit(notify, robust=True)
+
 
 def process_expired_no_show_bookings() -> None:
     bookings = Booking.objects.filter(
@@ -184,7 +197,7 @@ def process_expired_no_show_bookings() -> None:
         )
         send_notification_task.delay(message)
         send_no_show_payment_email(booking=booking, session_url=session.url)
-        
+
         bookings_to_delete.append(booking.pk)
     Booking.objects.filter(pk__in=bookings_to_delete).delete()
 
@@ -201,5 +214,3 @@ def send_no_show_payment_email(booking, session_url):
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[booking.user.email],
     )
-
-        
