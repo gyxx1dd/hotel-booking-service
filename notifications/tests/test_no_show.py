@@ -13,7 +13,6 @@ from rooms.models import Room
 
 
 def make_booking(**kwargs) -> Booking:
-    """Добавьте обязательные поля вашей модели (user, room и т.д.)."""
     now = timezone.now()
     user = get_user_model().objects.create_user(
         email="test@test.com",
