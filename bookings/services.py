@@ -42,7 +42,7 @@ def cancel_booking(booking_id):
             session_url=session.url,
         )
         message = (
-            f"Cancel booking:" + booking_details(booking) +
+            f"Cancel booking:\n" + booking_details(booking) +
             f"<b>ID Booking:</b> {payment.booking.id}\n"
             f"<b>Type:</b> {payment.type}\n"
             f"<b>Pay:</b> {payment.money_to_pay}\n"
@@ -137,7 +137,6 @@ def no_show() -> None:
     messages = [
         "No-show:\n"
         + booking_details(booking)
-        + f"<b>ID Booking:</b> {booking.id}\n"
         for booking in bookings
     ]
 
