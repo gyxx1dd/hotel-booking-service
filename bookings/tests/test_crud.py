@@ -1,12 +1,15 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase
 
+import bookings.views
 from bookings.models import Booking
 from rooms.models import Room
 
@@ -174,3 +177,71 @@ class BookingTests(APITestCase):
             },
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    @patch("bookings.views.cancel_booking")
+    def test_cancel_booking_success(self, mock_cancel):
+        booking = self.make_booking(self.user)
+        mock_cancel.return_value = booking
+        self.client.force_authenticate(self.user)
+
+        url = reverse(
+            "bookings:booking-cancel",
+            args=[booking.id],
+        )
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_cancel.assert_called_once_with(booking_id=booking.id)
+
+    @patch("bookings.views.check_in")
+    def test_check_in_success(self, mock_check_in):
+        booking = self.make_booking(self.user)
+        mock_check_in.return_value = booking
+        self.client.force_authenticate(self.user)
+        url = reverse(
+            "bookings:booking-check-in",
+            args=[booking.id],
+        )
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_check_in.assert_called_once_with(booking_id=booking.id)
+
+    @patch("bookings.views.check_out")
+    def test_check_out_booking_success(self, mock_check_out):
+        booking = self.make_booking(
+            self.user,
+            booking_status=Booking.Status.ACTIVE,
+        )
+        mock_check_out.return_value = booking
+        self.client.force_authenticate(self.user)
+
+        url = reverse(
+            "bookings:booking-check-out",
+            args=[booking.id],
+        )
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_check_out.assert_called_once_with(booking_id=booking.id)
+
+    @patch("bookings.views.cancel_booking")
+    def test_cancel_booking_validation_error(self, mock_cancel):
+        booking = self.make_booking(self.user)
+        mock_cancel.side_effect = ValidationError("Booking cannot be cancelled.")
+        self.client.force_authenticate(self.user)
+
+        url = reverse(
+            "bookings:booking-cancel",
+            args=[booking.id],
+        )
+        response = self.client.post(url)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            str(response.data["detail"][0]),
+            "Booking cannot be cancelled.",
+        )

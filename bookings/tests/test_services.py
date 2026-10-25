@@ -1,5 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -12,6 +14,7 @@ from bookings.services import (
     check_in,
     check_out,
     no_show,
+    send_no_show_payment_email,
 )
 from rooms.models import Room
 
@@ -59,7 +62,13 @@ class BookingServicesTestCase(TestCase):
 
     # cancel_booking
 
-    def test_cancel_future_booked_booking(self):
+    @patch("bookings.services.create_payment_session")
+    def test_cancel_future_booked_booking(self, mock_create_session):
+        mock_create_session.return_value = SimpleNamespace(
+            id="test-session-id",
+            url="https://example.com/checkout",
+        )
+
         booking = self.create_booking()
 
         result = cancel_booking(booking.pk)
@@ -68,6 +77,8 @@ class BookingServicesTestCase(TestCase):
 
         booking.refresh_from_db()
         self.assertEqual(booking.status, Booking.Status.CANCELLED)
+
+        mock_create_session.assert_called_once()
 
     def test_cancel_booking_with_wrong_status_raises_error(self):
         booking = self.create_booking(
@@ -129,7 +140,13 @@ class BookingServicesTestCase(TestCase):
 
     # check_out
 
-    def test_check_out_active_booking(self):
+    @patch("bookings.services.create_payment_session")
+    def test_check_out_active_booking(self, mock_create_session):
+        mock_create_session.return_value = SimpleNamespace(
+            id="test-session-id",
+            url="https://example.com/checkout",
+        )
+
         booking = self.create_booking(
             status=Booking.Status.ACTIVE,
             check_in_date=timezone.now() - timedelta(days=1),
@@ -144,6 +161,8 @@ class BookingServicesTestCase(TestCase):
         booking.refresh_from_db()
         self.assertEqual(booking.status, Booking.Status.COMPLETED)
         self.assertIsNotNone(booking.actual_check_out_date)
+
+        mock_create_session.assert_called_once()
 
     def test_check_out_booking_with_wrong_status_raises_error(self):
         booking = self.create_booking(
@@ -213,3 +232,17 @@ class BookingServicesTestCase(TestCase):
 
     def test_no_show_handles_no_matching_bookings(self):
         no_show()
+
+    # email
+
+    @patch("bookings.services.send_mail")
+    def test_no_show_email_is_sent(self, mock_send_mail):
+        booking = self.create_booking(
+            status=Booking.Status.CANCELLED,
+            check_in_date=timezone.now() - timedelta(days=2),
+        )
+        session_url = "https://example.com/checkout"
+
+        send_no_show_payment_email(booking, session_url)
+
+        mock_send_mail.assert_called_once()

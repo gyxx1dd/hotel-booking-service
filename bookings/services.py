@@ -1,6 +1,8 @@
 from datetime import timedelta
 from html import escape
 
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, APIException
@@ -20,6 +22,8 @@ def cancel_booking(booking_id):
     booking = Booking.objects.get(pk=booking_id)
     if booking.status != Booking.Status.BOOKED:
         raise ValidationError("Only booked reservations can be cancelled.")
+    if booking.check_in_date <= timezone.now():
+        raise ValidationError("Booking can only be cancelled before check-in.")
     try:
         session = create_payment_session(
             booking=booking, payment_type=Payment.Type.CANCELLATION_FEE
@@ -151,15 +155,8 @@ def process_expired_no_show_bookings() -> None:
     bookings = Booking.objects.filter(
         check_out_date__lt=timezone.now(), status=Booking.Status.NO_SHOW
     )
+    bookings_to_delete = []
     for booking in bookings:
-        existing_payment = Payment.objects.filter(
-            booking=booking,
-            type=Payment.Type.NO_SHOW_FEE,
-        ).exists()
-
-        if existing_payment:
-            continue
-
         try:
             session = create_payment_session(
                 booking=booking,
@@ -178,7 +175,6 @@ def process_expired_no_show_bookings() -> None:
             session_id=session.id,
             session_url=session.url,
         )
-
         message = (
             f"No-show payments:\n"
             f"<b>ID Booking:</b> {payment.booking.id}\n"
@@ -187,3 +183,23 @@ def process_expired_no_show_bookings() -> None:
             f"<b>Url:</b> {escape(payment.session_url)}\n"
         )
         send_notification_task.delay(message)
+        send_no_show_payment_email(booking=booking, session_url=session.url)
+        
+        bookings_to_delete.append(booking.pk)
+    Booking.objects.filter(pk__in=bookings_to_delete).delete()
+
+
+def send_no_show_payment_email(booking, session_url):
+    send_mail(
+        subject="Payment required for your missed booking",
+        message=(
+            f"Hello,\n\n"
+            f"You missed your booking. A no-show fee has been created.\n"
+            f"Please complete the payment using this link:\n"
+            f"{session_url}"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[booking.user.email],
+    )
+
+        
