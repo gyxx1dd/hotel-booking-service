@@ -1,6 +1,5 @@
+from datetime import date
 from decimal import Decimal
-from datetime import datetime
-from django.utils import timezone
 
 from bookings.models import Booking
 from rooms.models import Room
@@ -26,8 +25,8 @@ def sample_booking(room, user, **params):
     defaults = {
         "room": room,
         "user": user,
-        "check_in_date": timezone.make_aware(datetime(2026, 10, 20, 14, 0)),
-        "check_out_date": timezone.make_aware(datetime(2026, 10, 27, 12, 0)),
+        "check_in_date": date(2026, 10, 20),
+        "check_out_date": date(2026, 10, 27),
         "price_per_night": room.price_per_night,
     }
     defaults.update(params)
