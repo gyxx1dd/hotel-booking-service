@@ -6,7 +6,7 @@ import requests
 
 def booking_details(booking) -> str:
     return (
-        f"<b>ID:</b> {booking.id}\n"
+        f"<b>Booking ID:</b> {booking.id}\n"
         f"<b>Customer:</b> {escape(booking.user.email)} "
         f"{escape(booking.user.first_name)} {escape(booking.user.last_name)}\n"
         f"<b>Room:</b> {booking.room.number}, {escape(str(booking.room.type))}\n"
