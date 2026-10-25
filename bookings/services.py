@@ -19,6 +19,8 @@ def cancel_booking(booking_id):
     booking = Booking.objects.get(pk=booking_id)
     if booking.status != Booking.Status.BOOKED:
         raise ValidationError("Only booked reservations can be cancelled.")
+    if booking.check_in_date <= timezone.now():
+        raise ValidationError("Booking can only be cancelled before check-in.")
     try:
         session = create_payment_session(
             booking=booking, payment_type=Payment.Type.CANCELLATION_FEE
