@@ -31,6 +31,8 @@ class BookingViewSet(
     filterset_class = BookingFilter
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Booking.objects.none()
         queryset = Booking.objects.select_related("room").prefetch_related("payments")
         if not self.request.user.is_staff:
             queryset = queryset.filter(user=self.request.user)
