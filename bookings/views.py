@@ -1,7 +1,6 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from html import escape
 
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +10,6 @@ from bookings.models import Booking
 from bookings.serializers import (
     BookingListSerializer,
     BookingCreateSerializer,
-    BookingUpdateSerializer,
 )
 from bookings.filters import BookingFilter
 
@@ -71,6 +69,4 @@ class BookingViewSet(
     def perform_create(self, serializer):
         booking = serializer.save()
         message = "<b>New booking:</b>\n" + booking_details(booking)
-        transaction.on_commit(
-            lambda: send_notification_task.delay(message)
-        )
+        transaction.on_commit(lambda: send_notification_task.delay(message))
