@@ -1,6 +1,9 @@
 from datetime import timedelta
 
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import Model
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, APIException
 
@@ -11,6 +14,7 @@ from payments.services import (
     get_overstay_days,
     calculate_payment_amount,
 )
+from users.models import User
 
 
 def cancel_booking(booking_id):
@@ -145,5 +149,20 @@ def process_expired_no_show_bookings() -> None:
             session_id=session.id,
             session_url=session.url,
         )
+        send_no_show_payment_email(booking=booking, session_url=session.url)
         bookings_to_delete.append(booking.pk)
     Booking.objects.filter(pk__in=bookings_to_delete).delete()
+
+
+def send_no_show_payment_email(booking, session_url):
+    send_mail(
+        subject="Payment required for your missed booking",
+        message=(
+            f"Hello,\n\n"
+            f"You missed your booking. A no-show fee has been created.\n"
+            f"Please complete the payment using this link:\n"
+            f"{session_url}"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[booking.user.email],
+    )
