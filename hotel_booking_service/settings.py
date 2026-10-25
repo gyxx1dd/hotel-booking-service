@@ -94,11 +94,11 @@ WSGI_APPLICATION = "hotel_booking_service.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ["POSTGRES_DB"],
-        "USER": os.environ["POSTGRES_USER"],
-        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
-        "HOST": os.environ["POSTGRES_HOST"],
-        "PORT": os.environ["POSTGRES_PORT"],
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST"),
+        "PORT": os.getenv("POSTGRES_PORT"),
     }
 }
 
@@ -174,11 +174,6 @@ SPECTACULAR_SETTINGS = {
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
-CELERY_TIMEZONE = "Europe/Kyiv"
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
 
 CELERY_BEAT_SCHEDULE = {
     "mark-no-show-bookings-daily": {
@@ -191,23 +186,15 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-
-# Stripe (test mode only)
-# https://docs.stripe.com/keys
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_BROKER_URL = os.environ["BROKER_URL"]
+CELERY_TIMEZONE = "Europe/Kyiv"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
-
-
-# Public site URL for building absolute links when there is no request
-# (e.g. Stripe redirect URLs created from Celery tasks)
-
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
-
-
-# Trust the scheme set by a TLS-terminating proxy (e.g. ngrok), so
-# request.build_absolute_uri() returns https links and CSRF accepts the
-# https Origin. Without the header requests are treated as plain http.
-# https://docs.djangoproject.com/en/5.2/ref/settings/#secure-proxy-ssl-header
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

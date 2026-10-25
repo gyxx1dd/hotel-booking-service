@@ -75,3 +75,19 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return BookingListSerializer(instance, context=self.context).data
+
+
+class BookingUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = ("status", "check_in_date", "check_out_date", "actual_check_out_date")
+
+    def validate(self, attrs):
+        check_in = attrs.get("check_in_date", self.instance.check_in_date)
+        check_out = attrs.get("check_out_date", self.instance.check_out_date)
+
+        if check_in and check_out and check_out <= check_in:
+            raise serializers.ValidationError(
+                {"check_out_date": "Check-out must be after check-in."}
+            )
+        return attrs
