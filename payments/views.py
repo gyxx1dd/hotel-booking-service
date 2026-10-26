@@ -15,7 +15,6 @@ PAID_EVENTS = (
 )
 
 
-@extend_schema(exclude=True)
 class PaymentWebHookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
