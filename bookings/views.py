@@ -1,14 +1,16 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from html import escape
 
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from bookings.models import Booking
-from bookings.serializers import BookingListSerializer, BookingCreateSerializer, BookingUpdateSerializer
+from bookings.serializers import (
+    BookingListSerializer,
+    BookingCreateSerializer,
+)
 from bookings.filters import BookingFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -22,7 +24,6 @@ class BookingViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     permission_classes = [IsAuthenticated]
@@ -30,6 +31,8 @@ class BookingViewSet(
     filterset_class = BookingFilter
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Booking.objects.none()
         queryset = Booking.objects.select_related("room").prefetch_related("payments")
         if not self.request.user.is_staff:
             queryset = queryset.filter(user=self.request.user)
@@ -38,8 +41,6 @@ class BookingViewSet(
     def get_serializer_class(self):
         if self.action == "create":
             return BookingCreateSerializer
-        if self.action in ["update", "partial_update"]:
-            return BookingUpdateSerializer
         return BookingListSerializer
 
     @staticmethod
@@ -48,7 +49,7 @@ class BookingViewSet(
             booking = service(booking_id=booking.pk)
         except ValidationError as e:
             return Response(
-                {"detail": str(e.detail)},
+                {"detail": e.detail},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = BookingListSerializer(booking)
@@ -65,25 +66,9 @@ class BookingViewSet(
     @action(methods=["POST"], detail=True, url_path="check-out")
     def check_out(self, request, pk=None):
         return self._run_booking_action(check_out, self.get_object())
-    
+
     @transaction.atomic
     def perform_create(self, serializer):
         booking = serializer.save()
         message = "<b>New booking:</b>\n" + booking_details(booking)
-        transaction.on_commit(
-            lambda: send_notification_task.delay(message)
-        )
-
-    @transaction.atomic
-    def perform_update(self, serializer):
-        old_status = serializer.instance.status
-        booking = serializer.save()
-        message = (
-            f"Cancel booking:\n"
-            + booking_details(booking)
-            + f"<b>Who cancel:</b> {escape(self.request.user.email)}\n"
-        )
-        if old_status != Booking.Status.CANCELLED and booking.status == Booking.Status.CANCELLED:
-            transaction.on_commit(
-                lambda: send_notification_task.delay(message)
-            )
+        transaction.on_commit(lambda: send_notification_task.delay(message))
