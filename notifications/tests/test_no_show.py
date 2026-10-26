@@ -10,8 +10,6 @@ from bookings.services import no_show
 from rooms.models import Room
 
 
-
-
 def make_booking(**kwargs) -> Booking:
     now = timezone.now()
     user = get_user_model().objects.create_user(

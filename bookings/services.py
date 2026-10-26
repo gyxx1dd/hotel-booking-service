@@ -47,8 +47,17 @@ def cancel_booking(booking_id):
 
         booking.status = Booking.Status.CANCELLED
         booking.save(update_fields=["status"])
+        payment = Payment.objects.create(
+            booking=booking,
+            type=Payment.Type.CANCELLATION_FEE,
+            money_to_pay=calculate_payment_amount(
+                booking, Payment.Type.CANCELLATION_FEE
+            ),
+            session_id=session.id,
+            session_url=session.url,
+        )
 
-        message = f"Cancel booking:" + booking_details(booking)
+        message = f"Cancel booking:\n" + booking_details(booking)
 
         if needs_fee:
             payment = Payment.objects.create(
@@ -61,7 +70,6 @@ def cancel_booking(booking_id):
                 session_url=session.url,
             )
             message += (
-                f"<b>ID Booking:</b> {payment.booking.id}\n"
                 f"<b>Type:</b> {payment.type}\n"
                 f"<b>Pay:</b> {payment.money_to_pay}\n"
                 f"<b>Url to pay:</b> {escape(payment.session_url)}\n"
@@ -153,7 +161,8 @@ def no_show() -> None:
     Booking.objects.bulk_update(bookings, ["status"])
 
     messages = [
-        "No-show:\n" + booking_details(booking) + f"<b>ID Booking:</b> {booking.id}\n"
+        "No-show:\n"
+        + booking_details(booking)
         for booking in bookings
     ]
 
