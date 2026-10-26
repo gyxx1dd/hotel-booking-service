@@ -180,11 +180,13 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 CELERY_BEAT_SCHEDULE = {
     "mark-no-show-bookings-daily": {
         "task": "bookings.tasks.mark_no_show_bookings",
-        "schedule": crontab(hour=0, minute=0),
+        # "schedule": crontab(hour=0, minute=0),
+        "schedule": crontab(minute="*"),
     },
     "create-payments-for-no-show-bookings": {
         "task": "bookings.tasks.create_payments_for_no_show_bookings",
-        "schedule": crontab(hour=0, minute=15),
+        # "schedule": crontab(hour=0, minute=15),
+        "schedule": crontab(minute="*"),
     },
 }
 

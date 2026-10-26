@@ -47,15 +47,6 @@ def cancel_booking(booking_id):
 
         booking.status = Booking.Status.CANCELLED
         booking.save(update_fields=["status"])
-        payment = Payment.objects.create(
-            booking=booking,
-            type=Payment.Type.CANCELLATION_FEE,
-            money_to_pay=calculate_payment_amount(
-                booking, Payment.Type.CANCELLATION_FEE
-            ),
-            session_id=session.id,
-            session_url=session.url,
-        )
 
         message = f"Cancel booking:\n" + booking_details(booking)
 
@@ -207,7 +198,7 @@ def process_expired_no_show_bookings() -> None:
         send_notification_task.delay(message)
         send_no_show_payment_email(booking=booking, session_url=session.url)
 
-        bookings_to_delete.append(booking.pk)
+        bookings_to_delete.append(booking.id)
     Booking.objects.filter(pk__in=bookings_to_delete).delete()
 
 
