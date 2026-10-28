@@ -9,7 +9,6 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase
 
-import bookings.views
 from bookings.models import Booking
 from rooms.models import Room
 
@@ -43,7 +42,6 @@ class BookingTests(APITestCase):
             price_per_night="100.00",
             capacity=1,
         )
-        # Сохраняем DateTimeField стандарт
         self.now = timezone.now()
 
     def make_booking(self, user, start=1, end=3, booking_status=Booking.Status.BOOKED):
@@ -245,3 +243,19 @@ class BookingTests(APITestCase):
             str(response.data["detail"][0]),
             "Booking cannot be cancelled.",
         )
+
+    def test_stay_must_be_at_least_one_night(self):
+        """Check-in and check-out on the same day must be rejected."""
+        self.client.force_authenticate(self.user)
+        check_in = (self.now + timedelta(days=1)).replace(hour=10, minute=0)
+        check_out = check_in.replace(hour=12)
+
+        response = self.client.post(
+            LIST_URL,
+            {
+                "room": self.room.id,
+                "check_in_date": check_in.isoformat(),
+                "check_out_date": check_out.isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
