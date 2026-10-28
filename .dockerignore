@@ -6,3 +6,4 @@ Dockerfile
 .idea
 mydatabase
 db.sqlite3
+staticfiles/
