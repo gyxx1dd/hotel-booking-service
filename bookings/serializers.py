@@ -38,16 +38,17 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         fields = ("room", "check_in_date", "check_out_date")
 
     def validate(self, attrs):
+        """Check that the stay is at least one night and not in the past."""
         check_in = attrs["check_in_date"]
         check_out = attrs["check_out_date"]
 
-        if check_in < timezone.now():
+        if check_in.date() < timezone.localdate():
             raise serializers.ValidationError(
                 {"check_in_date": "Check-in cannot be in the past."}
             )
-        if check_out <= check_in:
+        if (check_out.date() - check_in.date()).days < 1:
             raise serializers.ValidationError(
-                {"check_out_date": "Check-out must be after check-in."}
+                {"check_out_date": "Stay must be at least one night."}
             )
         return attrs
 

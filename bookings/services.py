@@ -48,7 +48,7 @@ def cancel_booking(booking_id):
         booking.status = Booking.Status.CANCELLED
         booking.save(update_fields=["status"])
 
-        message = f"Cancel booking:\n" + booking_details(booking)
+        message = "Cancel booking:\n" + booking_details(booking)
 
         if needs_fee:
             payment = Payment.objects.create(
@@ -151,11 +151,7 @@ def no_show() -> None:
         booking.status = Booking.Status.NO_SHOW
     Booking.objects.bulk_update(bookings, ["status"])
 
-    messages = [
-        "No-show:\n"
-        + booking_details(booking)
-        for booking in bookings
-    ]
+    messages = ["No-show:\n" + booking_details(booking) for booking in bookings]
 
     def notify():
         for message in messages:
