@@ -5,7 +5,11 @@ from django.db import models
 
 
 class Room(models.Model):
+    """Hotel room available for booking."""
+
     class TypeChoices(models.TextChoices):
+        """Available room types."""
+
         SINGLE = "SINGLE", "Single"
         DOUBLE = "DOUBLE", "Double"
         SUITE = "SUITE", "Suite"
@@ -28,4 +32,6 @@ class Room(models.Model):
         ordering = ["number"]
 
     def __str__(self):
+        """Return a readable room name, e.g. 'Room 101'."""
+
         return f"Room {self.number}"

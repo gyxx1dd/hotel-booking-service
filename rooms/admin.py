@@ -5,6 +5,8 @@ from rooms.models import Room
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
+    """Admin configuration for rooms."""
+
     list_display = ("number", "type", "price_per_night", "capacity")
     list_filter = ("type",)
     search_fields = ("number",)

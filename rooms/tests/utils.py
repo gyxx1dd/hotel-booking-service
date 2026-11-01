@@ -7,6 +7,8 @@ from rooms.models import Room
 
 
 def room_payload(**params):
+    """Return valid room data, overridden by given params."""
+
     payload = {
         "number": "122",
         "type": Room.TypeChoices.SUITE,
@@ -19,10 +21,14 @@ def room_payload(**params):
 
 
 def sample_room(**params):
+    """Create and return a room with default values."""
+
     return Room.objects.create(**room_payload(**params))
 
 
 def sample_booking(room, user, **params):
+    """Create and return a booking for the given room and user."""
+
     defaults = {
         "room": room,
         "user": user,

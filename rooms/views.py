@@ -17,11 +17,15 @@ from rooms.services import get_room_calendar
 
 
 class RoomViewSet(viewsets.ModelViewSet):
+    """CRUD for rooms with filters and an availability calendar."""
+
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
     permission_classes = (IsAdminOrReadOnly,)
 
     def get_queryset(self):
+        """Return rooms filtered by 'type' and 'capacity' query params."""
+
         room_type = self.request.query_params.get("type")
         capacity = self.request.query_params.get("capacity")
 
@@ -67,6 +71,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         ]
     )
     def list(self, request, *args, **kwargs):
+        """Return a paginated list of rooms."""
+
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
@@ -94,6 +100,8 @@ class RoomViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["get"], url_path="calendar")
     def calendar(self, request, pk=None):
+        """Return room availability for each day between 'from' and 'to'."""
+
         room = self.get_object()
         date_from = request.query_params.get("from")
         date_to = request.query_params.get("to")
@@ -115,6 +123,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
+        """Delete a room unless it has related bookings."""
+
         try:
             return super().destroy(request, *args, **kwargs)
         except ProtectedError:
