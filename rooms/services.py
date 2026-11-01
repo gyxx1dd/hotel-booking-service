@@ -6,6 +6,15 @@ from bookings.models import Booking
 
 
 def get_room_calendar(room, date_from, date_to):
+    """
+    Build room availability for each day in the given date range.
+
+    A day is unavailable if it is covered by a BOOKED or ACTIVE
+    booking. The check-out day is considered available.
+
+    Returns a list of dicts with 'date' and 'available' keys.
+    """
+
     bookings = room.bookings.filter(
         status__in=(Booking.Status.BOOKED, Booking.Status.ACTIVE),
         check_in_date__date__lte=date_to,
