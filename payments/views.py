@@ -35,6 +35,16 @@ class PaymentWebHookView(APIView):
         session = event.data.object
         if event.type in PAID_EVENTS and session.payment_status == "paid":
             new_status = Payment.Status.PAID
+        elif event.type == "checkout.session.expired":
+            new_status = Payment.Status.EXPIRED
+        else:
+            return Response(status=status.HTTP_200_OK)
+
+        updated = Payment.objects.filter(
+            session_id=session.id, status=Payment.Status.PENDING
+        ).update(status=new_status)
+
+        if updated and new_status == Payment.Status.PAID:
             payment = Payment.objects.get(session_id=session.id)
             message = (f"<b>Successful payment:</b>\n"
                        f"<b>ID:</b> {payment.id}\n"
@@ -49,14 +59,6 @@ class PaymentWebHookView(APIView):
 
             send_notification_task.delay(message)
 
-        elif event.type == "checkout.session.expired":
-            new_status = Payment.Status.EXPIRED
-        else:
-            return Response(status=status.HTTP_200_OK)
-
-        Payment.objects.filter(
-            session_id=session.id, status=Payment.Status.PENDING
-        ).update(status=new_status)
         return Response(status=status.HTTP_200_OK)
 
 
