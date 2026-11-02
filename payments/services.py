@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import stripe
 from django.conf import settings
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 
 from bookings.models import Booking
 from payments.models import Payment
@@ -69,3 +69,18 @@ def create_payment_session(
         )
     except stripe.StripeError:
         raise APIException
+
+
+def renew_payment_session(payment: Payment) -> Payment:
+    if payment.status != Payment.Status.EXPIRED:
+        raise ValidationError({"detail": "Only expired payments can be renewed."})
+    if payment.booking is None:
+        raise ValidationError({"detail": "Payment is no longer linked to a booking."})
+
+    session = create_payment_session(payment.booking, payment.type)
+    payment.session_id = session.id
+    payment.session_url = session.url
+    payment.money_to_pay = calculate_payment_amount(payment.booking, payment.type)
+    payment.status = Payment.Status.PENDING
+    payment.save()
+    return payment
