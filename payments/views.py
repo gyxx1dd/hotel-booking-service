@@ -1,13 +1,16 @@
 import stripe
 from django.conf import settings
-from drf_spectacular.utils import extend_schema
+from django.db import transaction
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from notifications.tasks import send_notification_task
 from payments.models import Payment
+from payments.serializers import PaymentSerializer
+from payments.services import renew_payment_session
 
 PAID_EVENTS = (
     "checkout.session.completed",
@@ -55,3 +58,23 @@ class PaymentWebHookView(APIView):
             session_id=session.id, status=Payment.Status.PENDING
         ).update(status=new_status)
         return Response(status=status.HTTP_200_OK)
+
+
+class PaymentRenewView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PaymentSerializer
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Payment.objects.none()
+        queryset = Payment.objects.select_related("booking").select_for_update(
+            of=("self",)
+        )
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(booking__user=self.request.user)
+        return queryset
+
+    @transaction.atomic
+    def post(self, request, pk):
+        payment = renew_payment_session(self.get_object())
+        return Response(self.get_serializer(payment).data)

@@ -11,7 +11,7 @@ The system is fully usable through a browsable API (no frontend is included). In
 - **Users:** registration, JWT authentication, profile management (email is the login).
 - **Rooms:** CRUD for rooms, filtering by type and capacity, availability calendar for a date range.
 - **Bookings:** create, cancel, check-in, check-out; non-admins see only their own bookings.
-- **Payments (Stripe):** Checkout sessions for bookings, cancellation fees, no-show fees, and overstay fees.
+- **Payments (Stripe):** Checkout sessions for bookings, cancellation fees, no-show fees, and overstay fees; expired sessions can be renewed via `POST /api/v1/payments/<id>/renew/`.
 - **Notifications (Telegram):** messages to the staff chat about important events.
 - **Background tasks (Celery + Redis):** daily no-show detection and payment creation.
 - **API docs:** Swagger UI and ReDoc generated with `drf-spectacular`.
