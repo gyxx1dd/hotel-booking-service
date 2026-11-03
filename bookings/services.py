@@ -1,13 +1,12 @@
 from datetime import timedelta
 from html import escape
 
-from django.conf import settings
-from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, APIException
 
 from bookings.models import Booking
+from bookings.tasks import send_no_show_payment_email_task
 from notifications.services import booking_details
 from notifications.tasks import send_notification_task
 from payments.models import Payment
@@ -163,7 +162,7 @@ def no_show() -> None:
 def process_expired_no_show_bookings() -> None:
     bookings = Booking.objects.filter(
         check_out_date__lt=timezone.now(), status=Booking.Status.NO_SHOW
-    )
+    ).select_related("user")
     bookings_to_delete = []
     for booking in bookings:
         try:
@@ -192,21 +191,9 @@ def process_expired_no_show_bookings() -> None:
             f"<b>Url:</b> {escape(payment.session_url)}\n"
         )
         send_notification_task.delay(message)
-        send_no_show_payment_email(booking=booking, session_url=session.url)
+        send_no_show_payment_email_task.delay(
+            recipient_email=booking.user.email, session_url=session.url
+        )
 
         bookings_to_delete.append(booking.id)
     Booking.objects.filter(pk__in=bookings_to_delete).delete()
-
-
-def send_no_show_payment_email(booking, session_url):
-    send_mail(
-        subject="Payment required for your missed booking",
-        message=(
-            f"Hello,\n\n"
-            f"You missed your booking. A no-show fee has been created.\n"
-            f"Please complete the payment using this link:\n"
-            f"{session_url}"
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[booking.user.email],
-    )
