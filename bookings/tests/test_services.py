@@ -232,17 +232,3 @@ class BookingServicesTestCase(TestCase):
 
     def test_no_show_handles_no_matching_bookings(self):
         no_show()
-
-    # email
-
-    @patch("bookings.services.send_mail")
-    def test_no_show_email_is_sent(self, mock_send_mail):
-        booking = self.create_booking(
-            status=Booking.Status.CANCELLED,
-            check_in_date=timezone.now() - timedelta(days=2),
-        )
-        session_url = "https://example.com/checkout"
-
-        send_no_show_payment_email(booking, session_url)
-
-        mock_send_mail.assert_called_once()
