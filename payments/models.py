@@ -27,8 +27,9 @@ class Payment(models.Model):
     )
     booking = models.ForeignKey(
         "bookings.Booking",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="payments",
+        null=True,
     )
     session_url = models.URLField(max_length=500)
     session_id = models.CharField(max_length=255, unique=True)
